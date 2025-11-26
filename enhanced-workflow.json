@@ -1,0 +1,322 @@
+{
+  "name": "Enhanced AI Chatbot Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "ai-chatbot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -120,
+        40
+      ],
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "webhookId": "ai-chatbot-webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "user-message",
+              "name": "userMessage",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            },
+            {
+              "id": "session-id",
+              "name": "sessionId",
+              "value": "={{ $json.body.sessionId }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        100,
+        40
+      ],
+      "id": "extract-data",
+      "name": "Extract Request Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-empty",
+              "leftValue": "={{ $json.userMessage }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        320,
+        40
+      ],
+      "id": "validate-input",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error-response",
+              "name": "output",
+              "value": "Error: Message cannot be empty. Please provide a valid message.",
+              "type": "string"
+            },
+            {
+              "id": "error-status",
+              "name": "status",
+              "value": "error",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        200
+      ],
+      "id": "error-response",
+      "name": "Error Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simple session management without using $globals\nconst sessionId = $input.first().json.sessionId;\nconst userMessage = $input.first().json.userMessage;\n\n// For now, we'll just pass the message without session history\n// This avoids issues with $globals in n8n\n// In production, you could use a database or Redis for session storage\n\nreturn {\n  json: {\n    userMessage,\n    sessionId,\n    conversationHistory: `user: ${userMessage}`,\n    messageCount: 1\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        40
+      ],
+      "id": "manage-session",
+      "name": "Manage Session History"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a helpful AI assistant. Respond in the same language as the user (Thai or English). Be concise but thorough.\n\nConversation History:\n{{ $json.conversationHistory }}\n\nCurrent User Message:\n{{ $json.userMessage }}\n\nPlease provide a helpful response:",
+        "options": {
+          "systemMessage": "You are a helpful AI assistant. You respond in the same language as the user (Thai or English). Be concise but thorough."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        760,
+        40
+      ],
+      "id": "ai-agent",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        620,
+        200
+      ],
+      "id": "gemini-model",
+      "name": "Google Gemini Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "KrmoJ4k8M50fTPAj",
+          "name": "ai@pk"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process AI response and update session history\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\nconst sessionId = $input.first().json.sessionId;\n\n// Add AI response to session history\nif (sessionId && $globals.sessionHistory && $globals.sessionHistory[sessionId]) {\n  $globals.sessionHistory[sessionId].push({\n    role: 'assistant',\n    content: aiResponse,\n    timestamp: new Date().toISOString()\n  });\n  \n  // Keep only last 10 messages\n  if ($globals.sessionHistory[sessionId].length > 10) {\n    $globals.sessionHistory[sessionId] = $globals.sessionHistory[sessionId].slice(-10);\n  }\n}\n\n// Format response for the frontend\nreturn {\n  json: {\n    output: aiResponse,\n    sessionId: sessionId,\n    timestamp: new Date().toISOString(),\n    status: 'success'\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        40
+      ],
+      "id": "format-response",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        40
+      ],
+      "id": "webhook-response",
+      "name": "Webhook Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        540,
+        200
+      ],
+      "id": "error-webhook-response",
+      "name": "Error Webhook Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Request Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Request Data": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Manage Session History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manage Session History": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Response": {
+      "main": [
+        [
+          {
+            "node": "Error Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicyDefaultOption": "workflowsFromSameOwner"
+  },
+  "versionId": "enhanced-chatbot-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "enhanced-chatbot-instance"
+  },
+  "id": "enhanced-ai-chatbot",
+  "tags": [
+    "ai",
+    "chatbot",
+    "gemini"
+  ]
+}

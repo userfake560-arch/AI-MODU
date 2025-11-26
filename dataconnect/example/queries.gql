@@ -1,0 +1,29 @@
+mutation AddNewStudent($name: String!, $studentId: String!, $grade: Int!) @auth(level: USER) {
+  student_insert(data: {name: $name, studentId: $studentId, grade: $grade, createdAt_expr: "request.time"}) {
+    id
+  }
+}
+
+query GetStudentById($studentId: UUID!) @auth(level: USER) {
+  student(id: $studentId) {
+    name
+    studentId
+    grade
+  }
+}
+
+mutation UpdateSessionNotes($sessionId: UUID!, $notes: String) @auth(level: USER) {
+  session_update(id: $sessionId, data: {notes: $notes}) {
+    id
+  }
+}
+
+query ListConcernsForStudent($studentId: UUID!) @auth(level: USER) {
+  concerns(where: {studentId: {eq: $studentId}}) {
+    id
+    category
+    description
+    resolutionStatus
+    severity
+  }
+}

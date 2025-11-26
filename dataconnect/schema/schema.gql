@@ -1,0 +1,52 @@
+type Counselor @table {
+  name: String!
+  email: String!
+  phoneNumber: String
+  photoUrl: String
+  createdAt: Timestamp!
+}
+
+type Student @table {
+  studentId: String!
+  name: String!
+  grade: Int!
+  dateOfBirth: Date
+  contactNumber: String
+  parentName: String
+  parentContact: String
+  academicPerformance: String
+  createdAt: Timestamp!
+}
+
+type Session @table {
+  counselor: Counselor!
+  student: Student!
+  sessionDate: Date!
+  sessionTime: String!
+  type: String!
+  notes: String
+  outcomes: String
+  durationMinutes: Int
+  createdAt: Timestamp!
+}
+
+type Concern @table {
+  student: Student!
+  session: Session
+  category: String!
+  description: String!
+  severity: String
+  resolutionStatus: String
+  createdAt: Timestamp!
+}
+
+type FollowUp @table {
+  student: Student!
+  session: Session
+  dueDate: Date!
+  description: String!
+  status: String!
+  completionDate: Date
+  notes: String
+  createdAt: Timestamp!
+}

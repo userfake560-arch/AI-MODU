@@ -1,0 +1,88 @@
+mutation CreateSeedData @transaction @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  student_insertMany(data: [
+    {
+      id: "11111111-1111-1111-1111-111111111111",
+      name: "Alice Smith",
+      studentId: "AS123",
+      grade: 10,
+      createdAt: "2024-01-01T00:00:00Z"
+    },
+    {
+      id: "22222222-2222-2222-2222-222222222222",
+      name: "Bob Johnson",
+      studentId: "BJ456",
+      grade: 11,
+      createdAt: "2024-01-02T00:00:00Z"
+    }
+  ])
+  counselor_insertMany(data: [
+    {
+      id: "33333333-3333-3333-3333-333333333333",
+      name: "Carol White",
+      email: "carol.white@example.com",
+      createdAt: "2024-01-03T00:00:00Z"
+    },
+    {
+      id: "44444444-4444-4444-4444-444444444444",
+      name: "David Green",
+      email: "david.green@example.com",
+      createdAt: "2024-01-04T00:00:00Z"
+    }
+  ])
+  session_insertMany(data: [
+    {
+      id: "55555555-5555-5555-5555-555555555555",
+      studentId: "11111111-1111-1111-1111-111111111111",
+      counselorId: "33333333-3333-3333-3333-333333333333",
+      sessionDate: "2024-01-10",
+      sessionTime: "10:00",
+      type: "Individual",
+      createdAt: "2024-01-05T00:00:00Z"
+    },
+    {
+      id: "66666666-6666-6666-6666-666666666666",
+      studentId: "22222222-2222-2222-2222-222222222222",
+      counselorId: "44444444-4444-4444-4444-444444444444",
+      sessionDate: "2024-01-11",
+      sessionTime: "11:00",
+      type: "Group",
+      createdAt: "2024-01-06T00:00:00Z"
+    }
+  ])
+  followUp_insertMany(data: [
+    {
+      studentId: "11111111-1111-1111-1111-111111111111",
+      sessionId: "55555555-5555-5555-5555-555555555555",
+      dueDate: "2024-01-17",
+      status: "Pending",
+      description: "Follow up with student regarding academic performance.",
+      createdAt: "2024-01-07T00:00:00Z"
+    },
+    {
+      studentId: "22222222-2222-2222-2222-222222222222",
+      sessionId: "66666666-6666-6666-6666-666666666666",
+      dueDate: "2024-01-18",
+      status: "Completed",
+      description: "Check in on student's participation in group sessions.",
+      createdAt: "2024-01-08T00:00:00Z"
+    }
+  ])
+  concern_insertMany(data: [
+    {
+      studentId: "11111111-1111-1111-1111-111111111111",
+      sessionId: "55555555-5555-5555-5555-555555555555",
+      category: "Academics",
+      description: "Student is struggling with math.",
+      createdAt: "2024-01-09T00:00:00Z",
+      severity: "High"
+    },
+    {
+      studentId: "22222222-2222-2222-2222-222222222222",
+      sessionId: "66666666-6666-6666-6666-666666666666",
+      category: "Social",
+      description: "Student is having trouble making friends.",
+      createdAt: "2024-01-10T00:00:00Z",
+      severity: "Medium"
+    }
+  ])
+}

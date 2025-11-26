@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #c56fff;
+            --secondary-color: #ff7be9;
+            --user-bg: #e0e7ff;
+            --bot-bg: #f3f4f6;
+            --border-color: #e5e7eb;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .chat-container {
+            height: calc(100vh - 120px);
+            max-height: 700px;
+        }
+        
+        .message {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bot-bg);
+            border-radius: 18px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #9ca3af;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        .message-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        .send-button:active {
+            transform: scale(0.95);
+        }
+        
+        .chat-history-item {
+            transition: all 0.2s ease;
+        }
+        
+        .chat-history-item:hover {
+            background-color: #f9fafb;
+        }
+        
+        .chat-history-item.active {
+            background-color: var(--user-bg);
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .file-upload-area {
+            transition: all 0.2s ease;
+        }
+        
+        .file-upload-area.dragover {
+            background-color: #f0f9ff;
+            border-color: var(--primary-color);
+        }
+        
+        .suggested-action {
+            transition: all 0.2s ease;
+        }
+        
+        .suggested-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-6 max-w-7xl">
+        <!-- Header -->
+        <header class="bg-white rounded-lg shadow-sm mb-6 p-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-gray-800">PK Safezone</h1>
+                        <p class="text-sm text-gray-500">Youth Counselor Phukhieo School</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="clearChatBtn" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">
+                        <i class="fas fa-trash mr-1"></i> Clear Chat
+                    </button>
+                    <button id="settingsBtn" class="p-2 text-gray-600 hover:text-gray-800 transition-colors">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex gap-6">
+            <!-- Chat History Sidebar -->
+            <aside class="w-64 bg-white rounded-lg shadow-sm p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-medium text-gray-700">Chat History</h2>
+                    <button id="newChatBtn" class="p-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-plus text-xs"></i>
+                    </button>
+                </div>
+                <div id="chatHistory" class="space-y-2">
+                    <!-- Chat history items will be added here -->
+                </div>
+            </aside>
+
+            <!-- Main Chat Area -->
+            <main class="flex-1 bg-white rounded-lg shadow-sm flex flex-col">
+                <!-- Chat Messages Container -->
+                <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4 chat-container">
+                    <!-- Welcome Message -->
+                    <div class="message bot-message">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-robot text-indigo-600 text-sm"></i>
+                            </div>
+                            <div class="bg-gray-100 rounded-lg p-3 max-w-xs lg:max-w-md">
+                                <p class="text-gray-800">ไม่ว่าจะปัญหาไหน เรารับฟังเสมอ😊</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Suggested Actions -->
+                <div id="suggestedActions" class="px-4 pb-2">
+                    <div class="flex flex-wrap gap-2">
+                        <button class="suggested-action px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-xs text-gray-700 transition-colors">
+                            เครียดกับชีวิต
+                        </button>
+                        <button class="suggested-action px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-xs text-gray-700 transition-colors">
+                            มีปัญหากับเพื่อน
+                        </button>
+                        <button class="suggested-action px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full text-xs text-gray-700 transition-colors">
+                            มีปัญหาการเรียน
+                        </button>
+                    </div>
+                </div>
+
+                <!-- File Upload Area (Hidden by default) -->
+                <div id="fileUploadArea" class="file-upload-area hidden mx-4 mb-2 p-3 border-2 border-dashed border-gray-300 rounded-lg text-center">
+                    <i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-2"></i>
+                    <p class="text-sm text-gray-600">Drag & drop files here or click to browse</p>
+                    <input type="file" id="fileInput" class="hidden" multiple>
+                    <button id="browseFilesBtn" class="mt-2 px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition-colors">
+                        Browse Files
+                    </button>
+                </div>
+
+                <!-- Message Input Area -->
+                <div class="border-t border-gray-200 p-4">
+                    <div class="flex items-end space-x-2">
+                        <button id="attachFileBtn" class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <textarea 
+                            id="messageInput" 
+                            class="message-input flex-1 border border-gray-300 rounded-lg px-3 py-2 resize-none focus:border-indigo-500 transition-colors"
+                            placeholder="พิมพ์ข้อความ..."
+                            rows="1"
+                        ></textarea>
+                        <button id="sendBtn" class="send-button p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between mt-2">
+                        <p class="text-xs text-gray-500">Press Enter to send, Shift+Enter for new line</p>
+                        <div id="connectionStatus" class="flex items-center text-xs text-gray-500">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                            Connected
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const clearChatBtn = document.getElementById('clearChatBtn');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const chatHistory = document.getElementById('chatHistory');
+        const attachFileBtn = document.getElementById('attachFileBtn');
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const browseFilesBtn = document.getElementById('browseFilesBtn');
+        const suggestedActions = document.getElementById('suggestedActions');
+        const connectionStatus = document.getElementById('connectionStatus');
+        
+        // State
+        let currentChatId = 'chat_' + Date.now();
+        let chatSessions = {};
+        let isTyping = false;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadChatSessions();
+            createNewChatSession();
+            setupEventListeners();
+            autoResizeTextarea();
+        });
+        
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Send message
+            sendBtn.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Clear chat
+            clearChatBtn.addEventListener('click', clearCurrentChat);
+            
+            // New chat
+            newChatBtn.addEventListener('click', createNewChatSession);
+            
+            // File upload
+            attachFileBtn.addEventListener('click', toggleFileUpload);
+            browseFilesBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // Drag and drop
+            fileUploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileUploadArea.classList.add('dragover');
+            });
+            
+            fileUploadArea.addEventListener('dragleave', () => {
+                fileUploadArea.classList.remove('dragover');
+            });
+            
+            fileUploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileUploadArea.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+            
+            // Suggested actions
+            suggestedActions.addEventListener('click', (e) => {
+                if (e.target.classList.contains('suggested-action')) {
+                    messageInput.value = e.target.textContent;
+                    sendMessage();
+                }
+            });
+        }
+        
+        // Auto resize textarea
+        function autoResizeTextarea() {
+            messageInput.addEventListener('input', () => {
+                messageInput.style.height = 'auto';
+                messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+            });
+        }
+        
+        // Chat session management
+        function createNewChatSession() {
+            currentChatId = 'chat_' + Date.now();
+            chatSessions[currentChatId] = {
+                id: currentChatId,
+                title: 'New Chat',
+                messages: [],
+                timestamp: new Date().toISOString()
+            };
+            
+            // Clear chat messages
+            chatMessages.innerHTML = `
+                <div class="message bot-message">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-robot text-indigo-600 text-sm"></i>
+                        </div>
+                        <div class="bg-gray-100 rounded-lg p-3 max-w-xs lg:max-w-md">
+                            <p class="text-gray-800">สวัสดีครับ! ฉันคือ AI Assistant พร้อมช่วยเหลือคุณแล้ว ถามอะไรฉันได้เลย</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            updateChatHistory();
+            saveChatSessions();
+        }
+        
+        function loadChatSessions() {
+            const saved = localStorage.getItem('aiChatSessions');
+            if (saved) {
+                chatSessions = JSON.parse(saved);
+                updateChatHistory();
+            }
+        }
+        
+        function saveChatSessions() {
+            localStorage.setItem('aiChatSessions', JSON.stringify(chatSessions));
+        }
+        
+        function updateChatHistory() {
+            chatHistory.innerHTML = '';
+            
+            Object.values(chatSessions).reverse().forEach(session => {
+                const item = document.createElement('div');
+                item.className = `chat-history-item p-2 rounded cursor-pointer ${session.id === currentChatId ? 'active' : ''}`;
+                item.innerHTML = `
+                    <div class="font-medium text-sm text-gray-800 truncate">${session.title}</div>
+                    <div class="text-xs text-gray-500">${formatDate(session.timestamp)}</div>
+                `;
+                
+                item.addEventListener('click', () => loadChatSession(session.id));
+                chatHistory.appendChild(item);
+            });
+        }
+        
+        function loadChatSession(chatId) {
+            if (!chatSessions[chatId]) return;
+            
+            currentChatId = chatId;
+            const session = chatSessions[chatId];
+            
+            // Clear and reload messages
+            chatMessages.innerHTML = '';
+            session.messages.forEach(msg => {
+                addMessageToUI(msg.content, msg.sender, false);
+            });
+            
+            updateChatHistory();
+        }
+        
+        function clearCurrentChat() {
+            if (confirm('Are you sure you want to clear this chat?')) {
+                chatSessions[currentChatId].messages = [];
+                saveChatSessions();
+                createNewChatSession();
+            }
+        }
+        
+        // Message handling
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isTyping) return;
+            
+            // Add user message to UI
+            addMessageToUI(message, 'user');
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            
+            // Save message to session
+            const userMessage = {
+                content: message,
+                sender: 'user',
+                timestamp: new Date().toISOString()
+            };
+            chatSessions[currentChatId].messages.push(userMessage);
+            
+            // Update chat title if first message
+            if (chatSessions[currentChatId].messages.length === 1) {
+                chatSessions[currentChatId].title = message.substring(0, 30) + (message.length > 30 ? '...' : '');
+                updateChatHistory();
+            }
+            
+            // Show typing indicator
+            showTypingIndicator();
+            isTyping = true;
+            
+            try {
+                // Send to n8n webhook
+                const response = await fetch('n8nwebhook', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        sessionId: currentChatId
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                const data = await response.json();
+                
+                // Hide typing indicator
+                hideTypingIndicator();
+                
+                // Add bot response to UI
+                const botResponse = data.output || data.text || data.reply || "Sorry, I couldn't process your request.";
+                addMessageToUI(botResponse, 'bot');
+                
+                // Save bot message to session
+                const botMessage = {
+                    content: botResponse,
+                    sender: 'bot',
+                    timestamp: new Date().toISOString()
+                };
+                chatSessions[currentChatId].messages.push(botMessage);
+                
+                saveChatSessions();
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                hideTypingIndicator();
+                addMessageToUI('Sorry, I encountered an error. Please try again later.', 'bot');
+                
+                // Update connection status
+                connectionStatus.innerHTML = `
+                    <span class="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                    Connection Error
+                `;
+                
+                setTimeout(() => {
+                    connectionStatus.innerHTML = `
+                        <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                        Connected
+                    `;
+                }, 3000);
+            } finally {
+                isTyping = false;
+            }
+        }
+        
+        function addMessageToUI(content, sender, save = true) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            if (sender === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="flex items-start space-x-3 justify-end">
+                        <div class="bg-indigo-600 text-white rounded-lg p-3 max-w-xs lg:max-w-md">
+                            <p>${content}</p>
+                        </div>
+                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-user text-gray-600 text-sm"></i>
+                        </div>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-robot text-indigo-600 text-sm"></i>
+                        </div>
+                        <div class="bg-gray-100 rounded-lg p-3 max-w-xs lg:max-w-md">
+                            <p class="text-gray-800">${content}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = 'message bot-message';
+            typingDiv.innerHTML = `
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-indigo-600 text-sm"></i>
+                    </div>
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+        
+        // File handling
+        function toggleFileUpload() {
+            fileUploadArea.classList.toggle('hidden');
+        }
+        
+        function handleFileSelect(e) {
+            handleFiles(e.target.files);
+        }
+        
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            // For now, just show file info
+            const fileNames = Array.from(files).map(file => file.name).join(', ');
+            addMessageToUI(`📎 Attached: ${fileNames}`, 'user');
+            
+            // Hide file upload area
+            fileUploadArea.classList.add('hidden');
+            
+            // TODO: Implement file upload to server
+        }
+        
+        // Utility functions
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} min ago`;
+            if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+            return date.toLocaleDateString();
+        }
+    </script>
+</body>
+</html>

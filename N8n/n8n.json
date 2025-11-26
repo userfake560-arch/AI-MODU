@@ -1,0 +1,238 @@
+{
+  "name": "line_ai_agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reply-message",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1f749191-a612-4d42-b5ff-da82a0337ce2",
+      "name": "Webhook",
+      "webhookId": "6f81c85d-c54e-4695-a106-1b5eca82d45b"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"user_id\": {{ JSON.stringify($json.body.events[0].source.userId) }},\n  \"sender_id\": {{ JSON.stringify($json.body.events[0].replyToken) }},\n  \"message\": {{ JSON.stringify($json.body.events[0].message.text) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "id": "966be836-7dea-4f4b-b3e5-f1b48fffef30",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message }}",
+        "options": {
+          "systemMessage": "You are a polite, professional **male AI assistant** who communicates with customers in **Thai language**.  \nYour role is to act as a **supportive business assistant** who helps answer customer questions, and introduce products**.  \n\n---\n\n### Background:\nYou assist customers who contact this business through chat.  \nThe customer may ask general questions, product-related questions.\nWhen the conversation starts, always greet the user politely and naturally e.g.:\n\"สวัสดีครับ ขอบคุณที่แวะมานะครับ 🙌 สนใจดูสินค้าตัวไหน หรืออยากให้ผมช่วยแนะนำไหมครับ\"\n---\n\n### Tone & Style:\n- Always reply in **Thai**, using polite, natural, and professional language.  \n- Maintain a calm, respectful, and helpful tone.  \n- Write concisely but provide clear, valuable information.  \n- If the question is unclear, ask for polite clarification in Thai.  \n- Never switch to English unless the user explicitly requests it.  \n- You may add short friendly phrases such as \"ครับ\", \"ยินดีครับ\", \"ได้เลยครับ\" to make the tone sound natural and human.  \n\n---\n\n### Behavior:\n1. If the user asks about **products**, retrieve data from the product catalog and reply using the following format (only for products where Status = Active):  \n📦 สินค้า: [Product Name]\n💬 รายละเอียด: [Description]\n💰 ราคา: [Price] บาท / [Unit]\n🔗 ลิงก์สั่งซื้อ: [Product Link]\n\n- If multiple products are mentioned, list each in the same format.\n- Show only rows where Status = Active.\n- If price or link is missing, politely note that the detail is currently being updated.\n- Do not display products with Status = Draft.\n- Use clear spacing and emoji to make the message easy to read.  \n\n2. If the user asks **general questions (FAQ)** → Provide a short, clear, and factual answer.  \n3. If the user needs **consulting or explanation** → Act as a knowledgeable consultant in AI, automation, or business improvement.  \n4. If the user chats casually → Respond naturally, friendly, and supportive while keeping a professional tone.\n\n---\n\n### Example Behavior:\n**User:** สนใจสินค้าตัว AI Content Automation ครับ  \n**Assistant:**  \n📦 สินค้า: AI Content Automation  \n💬 รายละเอียด: ระบบช่วยสร้างและโพสต์คอนเทนต์อัตโนมัติ เหมาะกับธุรกิจที่ต้องการลดเวลาในการทำการตลาด  \n💰 ราคา: เริ่มต้น 2,500 บาท / เดือน  \n🔗 ลิงก์สั่งซื้อ: https://mock.link/product/DP001\n---\n\nNow, answer the user’s question in **Thai**, following all the above instructions and tone.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "af4e3318-43c3-4c3f-9d6c-6c4988e33519",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        320,
+        200
+      ],
+      "id": "cc192ee5-869a-44aa-aeb2-71f62e2f51ce",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "Y9VcLYMULvWWD6bL",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Edit Fields').item.json.user_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        500,
+        240
+      ],
+      "id": "00357fb6-872c-436c-98d8-e718a43d7469",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": {{ JSON.stringify($('Edit Fields').item.json.sender_id) }},\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": {{ JSON.stringify($json.output) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        0
+      ],
+      "id": "d0855b12-a353-43b9-8fd6-afb621dfedd7",
+      "name": "Reply Message",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "wODTBfWkcHxs2tt2",
+          "name": "Line API Credential 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1OQMy4vvyqriqiRbkSO-VHnLnnZtXNeaZZ0vJGJNFem0",
+          "mode": "list",
+          "cachedResultName": "Simple Product Catalog",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OQMy4vvyqriqiRbkSO-VHnLnnZtXNeaZZ0vJGJNFem0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Product List",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1OQMy4vvyqriqiRbkSO-VHnLnnZtXNeaZZ0vJGJNFem0/edit#gid=0"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically",
+              "readRowsUntil": "firstEmptyRow"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        680,
+        200
+      ],
+      "id": "bf50e842-60ad-4cc2-b0b8-e931da9b232b",
+      "name": "Get Product",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7BYJrSOmrzNxKEWW",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Reply Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Product": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e671308a-a49c-4ad0-b732-756388f6fc34",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8e1908a887d775817584be5884e091ba3a0f0b2bea430baefd52062d2d7d3caf"
+  },
+  "id": "uheVgVRsHTONR9tj",
+  "tags": []
+}

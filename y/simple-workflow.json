@@ -1,0 +1,98 @@
+{
+  "name": "Simple Webhook Test",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "ai-chatbot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -120,
+        40
+      ],
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "webhookId": "simple-test-webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response",
+              "name": "output",
+              "value": "Webhook received successfully! Your message: {{ $json.body.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        100,
+        40
+      ],
+      "id": "set-response",
+      "name": "Set Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        40
+      ],
+      "id": "webhook-response",
+      "name": "Webhook Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Response": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicyDefaultOption": "workflowsFromSameOwner"
+  },
+  "versionId": "simple-test-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "simple-test-instance"
+  },
+  "id": "simple-webhook-test",
+  "tags": [
+    "test",
+    "webhook"
+  ]
+}
